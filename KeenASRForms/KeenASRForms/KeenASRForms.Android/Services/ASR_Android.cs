@@ -1,4 +1,4 @@
-﻿using KeenASRForms.Interfaces;
+using KeenASRForms.Interfaces;
 using KeenASRForms.Models;
 using System;
 using System.Collections.Generic;
@@ -241,7 +241,23 @@ namespace KeenASRForms.Droid.Services
 
         public bool SetVADParameter(int vadParameter, float value)
         {
-            recognizer.SetVADParameter((KASRVadParameter)vadParameter, value);
+            switch(vadParameter)
+            {
+                case 0:
+                    recognizer.SetVADParameter(KASRVadParameter.KASRVadTimeoutForNoSpeech, value);
+                    break;
+                case 1:
+                    recognizer.SetVADParameter(KASRVadParameter.KASRVadTimeoutEndSilenceForGoodMatch, value);
+                    break;
+                case 2:
+                    recognizer.SetVADParameter(KASRVadParameter.KASRVadTimeoutEndSilenceForAnyMatch, value);
+                    break;
+                case 3:
+                    recognizer.SetVADParameter(KASRVadParameter.KASRVadTimeoutMaxDuration, value);
+                    break;
+
+            }
+           
             return true;
         }
 
@@ -320,7 +336,6 @@ namespace KeenASRForms.Droid.Services
         }
 
 
-
         public void stopListeningAndReturnResultWhenReady(int testCard)
         {
             //  RPC 14Mar2018 #700  Support Silence detection
@@ -338,11 +353,11 @@ namespace KeenASRForms.Droid.Services
                 if (lst != null)
                 {
                     System.Diagnostics.Debug.WriteLine("---------------------");
-                    if (lst.Text != null)
+                    if (lst.Words != null)
                     {
-                        foreach (var word in lst.Text)
+                        foreach (var word in lst.Words)
                         {
-                            System.Diagnostics.Debug.Write(" " + word);
+                            System.Diagnostics.Debug.Write(" " + word.Text + " " + word.StartTime + " " + word.Duration);
                         }
                     }
 
@@ -353,7 +368,7 @@ namespace KeenASRForms.Droid.Services
                 ret.FileName = GetLastRecordingFilename();
                 ret.Result = getLastResult(lst);
                 ret.TestCardNumber = testCard;
-                string jsonFileName = recognizer.LastRecordingFilename;
+                string jsonFileName = recognizer.LastJSONMetadataFilename;
                 if (jsonFileName != null)
                     ret.jsonResult = File.ReadAllText(jsonFileName);
                 else
@@ -376,7 +391,11 @@ namespace KeenASRForms.Droid.Services
 
         public void OnPartialResult(KASRRecognizer recognizer, KASRResult result)
         {
-            System.Diagnostics.Debug.WriteLine("Partial result: " + result.CleanText);
+            //  RPC 14Mar2018 #700  Support Silence detection
+            if (fSpeechRecognitionRunning)
+                lastSpeechResult = DateTime.Now;
+
+            System.Diagnostics.Debug.WriteLine("ASR: Partial " + result.CleanText);
         }
 
         public void Dispose()
